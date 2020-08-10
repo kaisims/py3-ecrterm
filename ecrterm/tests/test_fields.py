@@ -1,6 +1,8 @@
 from unittest import TestCase, main
 
-from ecrterm.packets.fields import *
+from ecrterm.packets.fields import IntField, Endianness, ByteField,\
+    BEIntField, BCDIntField, StringField, PasswordField, LVARField,\
+    LLLVARField, LLLStringField, BytesField, TLVField
 from ecrterm.packets.tlv import TLV
 
 
@@ -79,12 +81,14 @@ class TestFields(TestCase):
         lllv = LLLVARField()
 
         self.assertEqual(lllv.parse(b'\xF0\xF0\xF0'), (b'', b''))
-        self.assertEqual(lllv.parse(b'\xF0\xF0\xF1\x12\x34'), (b'\x12', b'\x34'))
+        self.assertEqual(
+            lllv.parse(b'\xF0\xF0\xF1\x12\x34'), (b'\x12', b'\x34'))
 
         self.assertEqual(lllv.serialize(b''), b'\xF0\xF0\xF0')
         self.assertEqual(lllv.serialize(b'\x12\x34'), b'\xF0\xF0\xF2\x12\x34')
 
-        self.assertEqual(lllv.serialize(b'\xAA' * 11), b'\xF0\xF1\xF1' + (b'\xAA' * 11))
+        self.assertEqual(
+            lllv.serialize(b'\xAA' * 11), b'\xF0\xF1\xF1' + (b'\xAA' * 11))
 
     def test_lllstringfield(self):
         ls = LLLStringField()
@@ -96,9 +100,12 @@ class TestFields(TestCase):
     def test_lllstring_regression(self):
         ls = LLLStringField()
 
-        d = b'\xf0\xf7\xf3AS-TID = 13F00013\rAS-Proc-Code = 20 903 00\rCapt.-Ref.= 0000\rAID59: 809258'
+        d = b'\xf0\xf7\xf3AS-TID = 13F00013\rAS-Proc-Code = 20' \
+            b' 903 00\rCapt.-Ref.= 0000\rAID59: 809258'
 
-        self.assertEqual(('AS-TID = 13F00013\rAS-Proc-Code = 20 903 00\rCapt.-Ref.= 0000\rAID59: 809258', b''), ls.parse(d))
+        self.assertEqual(
+            ('AS-TID = 13F00013\rAS-Proc-Code = 20'
+             ' 903 00\rCapt.-Ref.= 0000\rAID59: 809258', b''), ls.parse(d))
 
     def test_bytesfield(self):
         bf = BytesField()
@@ -122,9 +129,9 @@ class TestFields(TestCase):
 
     def test_coercion(self):
         self.assertIsInstance(TLVField().coerce([]), TLV)
-        self.assertIsInstance(TLVField().coerce(TLV(tag_=None, value_=[])).value_, list)
+        self.assertIsInstance(TLVField().coerce(
+            TLV(tag_=None, value_=[])).value_, list)
         self.assertIsInstance(IntField().coerce('3'), int)
-
 
     def test_validator(self):
         bf = ByteField()

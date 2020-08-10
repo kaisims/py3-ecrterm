@@ -2,12 +2,15 @@ from enum import Enum
 from typing import Any, Union, List, Optional, Tuple
 
 from .tlv import TLV, TLVDictionary, ContainerType
-from .types import CharacterSet, VendorQuirks, CardholderIdentification, OnlineTag, FileID
+from .types import CharacterSet, VendorQuirks, CardholderIdentification, \
+    OnlineTag
 from .context import CurrentContext
 from .text_encoding import encode, decode
 
+
 class ParseError(Exception):
     pass
+
 
 class Endianness(Enum):
     BIG_ENDIAN = 3210
@@ -18,7 +21,8 @@ class Field:
     REPR_FORMAT = "{!r}"
     DATA_TYPE = None
 
-    def __init__(self, required=True, ignore_parse_error=False, data_type=None, name=None, *args, **kwargs):
+    def __init__(self, required=True, ignore_parse_error=False, data_type=None,
+                 name=None, *args, **kwargs):
         self.required = required
         self.ignore_parse_error = ignore_parse_error
         self.data_type = data_type or self.DATA_TYPE
@@ -79,7 +83,8 @@ class FixedLengthField(Field):
 
     def validate(self, data: Any) -> None:
         if len(self.to_bytes(data)) != self.length:
-            raise ValueError("Field must be exactly {} bytes long".format(self.length))
+            raise ValueError(
+                "Field must be exactly {} bytes long".format(self.length))
 
 
 class LVARField(Field):
@@ -87,25 +92,26 @@ class LVARField(Field):
 
     def parse(self, data: Union[bytes, List[int]]) -> Tuple[Any, bytes]:
         data = bytes(data) if not isinstance(data, bytes) else data
-        l = 0
+        length = 0
         for i in range(self.LL):
             if (data[i] & 0xF0) != 0xF0 or (data[i] & 0x0F) > 9:
                 raise ParseError("L*VAR length header invalid")
-            l = (l * 10) + (data[i] & 0x0F)
+            length = (length * 10) + (data[i] & 0x0F)
         data = data[self.LL:]
 
-        v, data = data[:l], data[l:]
+        v, data = data[:length], data[length:]
 
         return self.from_bytes(v), data
 
     def serialize(self, data: Any) -> bytes:
         data = self.to_bytes(data)
 
-        l = len(data)
-        if l >= (10 ** self.LL):
+        length = len(data)
+        if length >= (10 ** self.LL):
             raise ValueError("Data too long for L*VAR field")
 
-        header = bytes(0xF0 | ((l // (10 ** i)) % 10) for i in reversed(range(self.LL)))
+        header = bytes(0xF0 | ((length // (10 ** i)) % 10)
+                       for i in reversed(range(self.LL)))
         return header + data
 
 
@@ -123,9 +129,11 @@ class IntField(Field):
     DATA_TYPE = int
 
     def to_bytes(self, v: int, length: Optional[int] = None) -> bytes:
-        length = length if length is not None else (self.length if self.length is not None else self.LENGTH)
+        length = length if length is not None else (
+            self.length if self.length is not None else self.LENGTH)
         if length is None:
-            raise ValueError("Need to specify length for IntField serialization")
+            raise ValueError(
+                "Need to specify length for IntField serialization")
 
         result = [0] * length
         for i in range(length):
@@ -136,7 +144,8 @@ class IntField(Field):
                 result[i] = n
 
         if v:
-            raise ValueError("Value too large to serialize in {} bytes".format(length))
+            raise ValueError(
+                "Value too large to serialize in {} bytes".format(length))
 
         return bytes(result)
 
@@ -169,16 +178,21 @@ class StringField(BytesField):
         super().__init__(*args, **kwargs)
 
     def from_bytes(self, v: Union[bytes, List[int]]) -> str:
-        character_set = self._character_set if self._character_set is not None else CurrentContext.get('character_set', CharacterSet.DEFAULT)
+        character_set = self._character_set if \
+            self._character_set is not None \
+            else CurrentContext.get('character_set', CharacterSet.DEFAULT)
         return decode(bytes(v), character_set)
 
     def to_bytes(self, v: str, length: int = None) -> bytes:
-        character_set = self._character_set if self._character_set is not None else CurrentContext.get('character_set', CharacterSet.DEFAULT)
+        character_set = self._character_set if \
+            self._character_set is not None \
+            else CurrentContext.get('character_set', CharacterSet.DEFAULT)
         retval = encode(v, character_set)
 
         if length:
             if len(retval) != length:
-                raise ValueError("String length doesn't match fixed string length")
+                raise ValueError(
+                    "String length doesn't match fixed string length")
 
         return retval
 
@@ -192,7 +206,7 @@ class FlagByteField(IntField, FixedLengthField):
     LENGTH = 1
 
     def __init__(self, *args, **kwargs):
-        if not 'data_type' in kwargs:
+        if 'data_type' not in kwargs:
             raise TypeError("Must specify data_type")
         super().__init__(*args, **kwargs)
 
@@ -212,7 +226,7 @@ class BCDVariableLengthField(Field):
             raise ValueError("BCD field contents can only be numeric")
 
         if len(v) % 2 != 0:
-            v = '0'+v
+            v = '0' + v
 
         return bytes(bytearray.fromhex(v))
 
@@ -226,7 +240,8 @@ class BCDField(BCDVariableLengthField, FixedLengthField):
     DATA_TYPE = str
 
     def to_bytes(self, v: str, length: Optional[int] = None) -> bytes:
-        length = length if length is not None else (self.length if self.length is not None else self.LENGTH)
+        length = length if length is not None else (
+            self.length if self.length is not None else self.LENGTH)
         if length is None:
             raise ValueError("Must specify length for BCDField")
 
@@ -248,9 +263,10 @@ class BCDIntField(BCDField):
         return int(v, 10)
 
     def to_bytes(self, v: int, length: Optional[int] = None) -> bytes:
-        length = length if length is not None else (self.length if self.length is not None else self.LENGTH)
+        length = length if length is not None else (
+            self.length if self.length is not None else self.LENGTH)
         v = str(int(v))
-        return super().to_bytes(v.rjust(length*2, '0'), length)
+        return super().to_bytes(v.rjust(length * 2, '0'), length)
 
     def coerce(self, data: Any) -> int:
         if isinstance(data, str):
@@ -285,13 +301,17 @@ class TLVField(Field):
         return v.serialize()
 
     def parse(self, data: Union[bytes, List[int]]) -> Tuple[TLV, bytes]:
-        return TLV.parse(data, empty_tag=True, dictionary='feig_zvt' if VendorQuirks.FEIG_CVEND in CurrentContext.get('vendor_quirks', set()) else 'zvt')
+        return TLV.parse(
+            data,
+            empty_tag=True,
+            dictionary='feig_zvt' if VendorQuirks.FEIG_CVEND
+            in CurrentContext.get('vendor_quirks', set()) else 'zvt')
 
     def serialize(self, data: TLV) -> bytes:
         return data.serialize()
 
     def __get__(self, instance, objtype=None) -> TLV:
-        if not self in instance._values:
+        if self not in instance._values:
             instance._values[self] = TLV()
             instance._values[self].pending = True
         return super().__get__(instance, objtype)
@@ -302,15 +322,20 @@ TLVDictionary.register(
         None: BytesField(),
         0x07: StringField(name="text_line"),
         0x14: FlagByteField(name="character_set", data_type=CharacterSet),
-        0x15: StringField(name="language_code", character_set=CharacterSet.ASCII_7BIT),
+        0x15: StringField(name="language_code",
+                          character_set=CharacterSet.ASCII_7BIT),
         0x1d: BEIntField(name='file_id', length=1),
         0x1e: BEIntField(name='start_position', length=4),
         0x1f00: BEIntField(name='file_size', length=4),
-        0x1f10: FlagByteField(name="cardholder_identification", data_type=CardholderIdentification),
+        0x1f10: FlagByteField(name="cardholder_identification",
+                              data_type=CardholderIdentification),
         0x1f11: FlagByteField(name='online_tag', data_type=OnlineTag),
-        0x1F17: StringField(name="extended_error_text", character_set=CharacterSet.ZVT_8BIT),
-        0x1F40: StringField(name="device_name", character_set=CharacterSet.ASCII_7BIT),
-        0x1F41: StringField(name="software_version", character_set=CharacterSet.ASCII_7BIT),
+        0x1F17: StringField(name="extended_error_text",
+                            character_set=CharacterSet.ZVT_8BIT),
+        0x1F40: StringField(name="device_name",
+                            character_set=CharacterSet.ASCII_7BIT),
+        0x1F41: StringField(name="software_version",
+                            character_set=CharacterSet.ASCII_7BIT),
         0x1F42: BCDVariableLengthField(name="serial_number"),
         0x2f: ContainerType(name="payment_type"),
     }
@@ -318,7 +343,8 @@ TLVDictionary.register(
 
 TLVDictionary.child(
     'feig_zvt', 'zvt', {
-        0x1F17: StringField(name="extended_error_text", character_set=CharacterSet.UTF8),
+        0x1F17: StringField(name="extended_error_text",
+                            character_set=CharacterSet.UTF8),
         0xFF40: PasswordField(name="service_password"),
     }
 )

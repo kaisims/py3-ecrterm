@@ -3,7 +3,7 @@
 from typing import TypeVar, Type
 from collections import OrderedDict
 
-from .fields import *
+from .fields import Union, List, Field, ParseError, Tuple, Any
 from .bitmaps import BITMAPS
 
 # Currencies
@@ -28,14 +28,19 @@ class FieldContainer(type):
         retval.FIELDS = OrderedDict()
         for supercls in reversed(bases):
             if hasattr(supercls, 'FIELDS'):
-                retval.FIELDS.update((k, v) for (k, v) in supercls.FIELDS.items())
-        retval.FIELDS.update((k, v) for (k, v) in classdict.items() if isinstance(v, Field))
+                retval.FIELDS.update(
+                    (k, v) for (k, v) in supercls.FIELDS.items())
+        retval.FIELDS.update(
+            (k, v) for (k, v) in classdict.items() if isinstance(v, Field))
 
         have_optional = False
         for k, v in retval.FIELDS.items():
             if v.required:
                 if have_optional:
-                    raise TypeError("Cannot include required field {} after optional fields".format(k))
+                    raise TypeError(
+                        "Cannot include required field {} after optional "
+                        "fields".format(
+                            k))
             else:
                 if not v.ignore_parse_error:
                     have_optional = True
@@ -70,7 +75,8 @@ class APDU(metaclass=FieldContainer):
 
     def items(self):
         return \
-            [(name, getattr(self, name)) for (name, field) in self.FIELDS.items() if field in self._values] + \
+            [(name, getattr(self, name)) for (name, field) in
+             self.FIELDS.items() if field in self._values] + \
             [(name, getattr(self, name)) for name in self._bitmaps.keys()]
 
     def __repr__(self):
@@ -78,7 +84,8 @@ class APDU(metaclass=FieldContainer):
             (
                 k,
                 self.FIELDS[k].represent(v) if k in self.FIELDS
-                else self._KNOWN_BITMAPS[self._bitmaps[k]][0].represent(v) if k in self._bitmaps
+                else self._KNOWN_BITMAPS[self._bitmaps[k]][0].represent(
+                    v) if k in self._bitmaps
                 else "{!r}".format(v)
             )
             for (k, v) in self.items() if v is not None
@@ -101,7 +108,8 @@ class APDU(metaclass=FieldContainer):
                     bmp = key
 
         if bmp is None:
-            raise AttributeError("{!r} object has no attribute {!r}".format(self.__class__.__name__, item))
+            raise AttributeError("{!r} object has no attribute {!r}".format(
+                self.__class__.__name__, item))
 
         return self._KNOWN_BITMAPS[bmp][0].__get__(self)
 
@@ -134,18 +142,20 @@ class APDU(metaclass=FieldContainer):
                     bmp = key
 
         if bmp is not None:
-            if self.ALLOWED_BITMAPS is not None and self._KNOWN_BITMAPS[bmp][1] not in self.ALLOWED_BITMAPS:
-                raise AttributeError("Bitmap {:02X} not allowed on {}".format(bmp, self))
+            if self.ALLOWED_BITMAPS is not None and \
+                    self._KNOWN_BITMAPS[bmp][1] not in self.ALLOWED_BITMAPS:
+                raise AttributeError(
+                    "Bitmap {:02X} not allowed on {}".format(bmp, self))
             self._KNOWN_BITMAPS[bmp][0].__set__(self, value)
         else:
             super().__setattr__(item, value)
 
     @staticmethod
-    def compute_length_field(l: int) -> bytes:
-        if l < 255:
-            return bytes([l])
-        if l < 256 * 256 - 1:
-            return bytes([0xff, l & 0xff, (l >> 8) & 0xff])
+    def compute_length_field(length: int) -> bytes:
+        if length < 255:
+            return bytes([length])
+        if length < 256 * 256 - 1:
+            return bytes([0xff, length & 0xff, (length >> 8) & 0xff])
         raise ValueError
 
     @classmethod
@@ -158,7 +168,8 @@ class APDU(metaclass=FieldContainer):
     def can_parse(cls, data: Union[bytes, List[int]]) -> bool:
         return True  # pragma: no cover
 
-    def parser_hook(self, data: Union[bytes, List[int]]) -> Union[bytes, List[int]]:
+    def parser_hook(self, data: Union[bytes,
+                                      List[int]]) -> Union[bytes, List[int]]:
         return data
 
     @classmethod
@@ -190,7 +201,8 @@ class APDU(metaclass=FieldContainer):
                 items = retval._parse_inner(data, blacklist)
 
                 if isinstance(items, Field):
-                    # The parser has indicated the field it thinks is the problem
+                    # The parser has indicated the field it thinks is the
+                    # problem
                     # Add it to the blacklist and retry
                     blacklist.append(items)
                     continue
@@ -204,7 +216,8 @@ class APDU(metaclass=FieldContainer):
             except ParseError:
                 blacklist_candidates = [
                     f for f in retval.FIELDS.values()
-                    if not f.required and f.ignore_parse_error and not f in blacklist
+                    if not f.required and f.ignore_parse_error and f not
+                    in blacklist
                 ]
                 if not blacklist_candidates:
                     # No more we can do, probably really a parse error
@@ -216,15 +229,17 @@ class APDU(metaclass=FieldContainer):
         # FIXME Mandatory fields.
         return retval
 
-
-
-    def _parse_inner(self, data:bytes, blacklist: List[Field]) -> Union[List[Tuple[str, Any]], Field]:
+    def _parse_inner(self, data: bytes,
+                     blacklist: List[Field]) -> Union[List[Tuple[str, Any]],
+                                                      Field]:
         # ~~~~ Strategy to parse the SUPER CURSED Completion packet ~~~~
-        # A) When a Field parser marked required=False, ignore_parse_error=True fails
-        #    it gets added to the blacklist and not tried again
-        # B) When something else fails, the first non-blacklisted field parser
-        #    marked required=False, ignore_parse_error=True gets added to the blacklist
-        #    and the process is started from scratch
+        # A)
+        # When a Field parser marked required=False, ignore_parse_error=True
+        # fails it gets added to the blacklist and not tried again
+        # B)
+        # When something else fails, the first non-blacklisted field parser
+        # marked required=False, ignore_parse_error=True gets added to the
+        # blacklist and the process is started from scratch
 
         retval = []
 
@@ -239,7 +254,8 @@ class APDU(metaclass=FieldContainer):
                 value, data = field.parse(data)
             except ParseError:
                 if field.ignore_parse_error:
-                    # Indicate this field to the outer loop as being problematic
+                    # Indicate this field to the outer loop as being
+                    # problematic
                     return field
                 else:
                     raise
@@ -249,7 +265,8 @@ class APDU(metaclass=FieldContainer):
         # Try to parse the remainder as bitmaps
         while len(data):
             key = data[0]
-            field, name, description = self._KNOWN_BITMAPS.get(key, (None, None, None))
+            field, name, description = self._KNOWN_BITMAPS.get(key, (
+                None, None, None))
             if field is None:
                 raise ParseError("Invalid bitmap 0x{:02X}".format(key))
             value, data = field.parse(data[1:])
@@ -257,11 +274,11 @@ class APDU(metaclass=FieldContainer):
 
         return retval
 
-
     def serialize(self) -> bytes:
         data = bytearray()
         for name, field in self.FIELDS.items():
-            # FIXME: Mandatory fields.  Esp. in conjunction with bitmaps (defaults?)
+            # FIXME: Mandatory fields.  Esp. in conjunction with bitmaps (
+            #  defaults?)
             d = getattr(self, name)
             if d is not None:
                 data.extend(field.serialize(d))
@@ -270,7 +287,8 @@ class APDU(metaclass=FieldContainer):
             if d is not None:
                 data.append(key)
                 data.extend(self._KNOWN_BITMAPS[key][0].serialize(d))
-        return bytes(self.control_field) + self.compute_length_field(len(data)) + data
+        return bytes(self.control_field) + self.compute_length_field(
+            len(data)) + data
 
 
 # FIXME Command vs. response vs. packet
@@ -288,10 +306,10 @@ class CommandAPDU(APDU):
     def can_parse(cls, data: Union[bytes, List[int]]) -> bool:
         data = bytes(data)
         return len(data) >= 2 and (
-            cls.CMD_CLASS is Ellipsis or cls.CMD_CLASS == data[0]
+                cls.CMD_CLASS is Ellipsis or cls.CMD_CLASS == data[0]
         ) and (
-            cls.CMD_INSTR is Ellipsis or cls.CMD_INSTR == data[1]
-        )
+                       cls.CMD_INSTR is Ellipsis or cls.CMD_INSTR == data[1]
+               )
 
     @property
     def cmd_class(self):
@@ -321,10 +339,10 @@ class ResponseAPDU(APDU):
     def can_parse(cls, data: Union[bytes, List[int]]) -> bool:
         data = bytes(data)
         return len(data) >= 2 and (
-            cls.RESP_CCRC is Ellipsis or cls.RESP_CCRC == data[0]
+                cls.RESP_CCRC is Ellipsis or cls.RESP_CCRC == data[0]
         ) and (
-            cls.RESP_APRC is Ellipsis or cls.RESP_APRC == data[1]
-        )
+                       cls.RESP_APRC is Ellipsis or cls.RESP_APRC == data[1]
+               )
 
     @property
     def resp_ccrc(self):
@@ -341,5 +359,3 @@ class ResponseAPDU(APDU):
     @resp_aprc.setter
     def resp_aprc(self, v):
         self.control_field[1] = v
-
-

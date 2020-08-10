@@ -1,6 +1,6 @@
-from unittest import TestCase, main, expectedFailure
+from unittest import TestCase
 
-from ecrterm.packets.tlv import *
+from ecrterm.packets.tlv import TLV, TLVClass
 
 
 class TestTLV(TestCase):
@@ -68,13 +68,12 @@ class TestTLV(TestCase):
 
         self.assertEqual(2, len(t1.value_))
 
-
-
     def test_container_implicit_creation(self):
         t1 = TLV()
 
         self.assertIsInstance(t1.xfe, TLV)
-        # An implicit item is created, but since we are not accessing its value, it is not fully realized
+        # An implicit item is created, but since we are not accessing
+        # its value, it is not fully realized
         self.assertEqual(b'\x00', t1.serialize())
 
         # But, when assigning to the item, it becomes concrete
@@ -89,7 +88,9 @@ class TestTLV(TestCase):
         self.assertEqual(b'\x00', t2.serialize())
 
         t2.xfe.xfe.xfe.xfe.xfe.xfe.xde = b''
-        self.assertEqual(b'\x0e\xfe\x0c\xfe\x0a\xfe\x08\xfe\x06\xfe\x04\xfe\x02\xde\x00', t2.serialize())
+        self.assertEqual(
+            b'\x0e\xfe\x0c\xfe\x0a\xfe\x08\xfe\x06\xfe\x04\xfe\x02\xde\x00',
+            t2.serialize())
 
     def test_null_coercion(self):
         a = TLV()
@@ -100,11 +101,14 @@ class TestTLV(TestCase):
 
 class TestTLVRepr(TestCase):
     def setUp(self) -> None:
-        self.coll_1, dummy_ = TLV.parse(b'\x06\x01\x01\xaa\x02\x01\xbb', empty_tag=True)
+        self.coll_1, dummy_ = TLV.parse(b'\x06\x01\x01\xaa\x02\x01\xbb',
+                                        empty_tag=True)
         self.par_1, dummy_ = TLV.parse(b'\x20\x06\x21\x04\x03\x02\xab\xcd')
 
     def test_naked_repr(self):
-        self.assertEqual('TLV(x1=b\'\\xaa\', x2=b\'\\xbb\')', repr(self.coll_1))
+        self.assertEqual('TLV(x1=b\'\\xaa\', x2=b\'\\xbb\')',
+                         repr(self.coll_1))
 
     def test_nested_repr(self):
-        self.assertEqual('TLV(tag_=0x20, x21={\'x3\': b\'\\xab\\xcd\'})', repr(self.par_1))
+        self.assertEqual('TLV(tag_=0x20, x21={\'x3\': b\'\\xab\\xcd\'})',
+                         repr(self.par_1))

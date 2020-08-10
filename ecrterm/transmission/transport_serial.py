@@ -8,7 +8,6 @@ The Serial Layer is a transport used for
 
 import serial
 import logging
-from functools import partial
 from typing import Tuple
 from ecrterm.common import Transport
 from ecrterm.conv import toHexString
@@ -181,14 +180,16 @@ class SerialTransport(Transport):
             # self.write_nak()
             return False, data
 
-    def receive(self, timeout=TIMEOUT_T2, *args, **kwargs) -> Tuple[bool, bytes]:
+    def receive(self,
+                timeout=TIMEOUT_T2, *args, **kwargs) -> Tuple[bool, bytes]:
         crc_ok = False
         data = None
         # receive a message up to three times.
         for i in range(3):
             crc_ok, data = self.read_message(timeout)
             if not crc_ok:
-                logger.log(logging.WARNING if i <= 2 else logging.ERROR, 'CRC Checksum Error, retry %s' % i)
+                logger.log(logging.WARNING if i <= 2 else logging.ERROR,
+                           'CRC Checksum Error, retry %s' % i)
             else:
                 break
         if not crc_ok:
@@ -207,7 +208,10 @@ class SerialTransport(Transport):
         """
         if data:
             message = SerialMessage(data)
-            self.write(bytes([DLE, STX]) + data.replace(bytes([DLE]), bytes([DLE, DLE])) + bytes([DLE, ETX, message.crc_l, message.crc_h]))
+            self.write(bytes([DLE, STX]) + data.replace(
+                bytes([DLE]),
+                bytes([DLE, DLE]))
+                       + bytes([DLE, ETX, message.crc_l, message.crc_h]))
             acknowledge = b''
             ts_start = time()
             while len(acknowledge) < 1:

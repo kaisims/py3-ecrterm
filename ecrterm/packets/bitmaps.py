@@ -1,10 +1,14 @@
-from .fields import *
-from .types import *
+from .fields import ByteField, FlagByteField, BCDField, LLVARField, \
+    LLLVARField, FixedLengthField, TLVField, \
+    BCDIntField, PasswordField, LLStringField
+from .types import ServiceByte, CurrencyCode
 
 BITMAPS = {
     0x01: (ByteField(), 'timeout', 'binary time-out'),
     0x02: (ByteField(), 'max_status_infos', 'binary max.status infos'),
-    0x03: (FlagByteField(data_type=ServiceByte), 'service_byte', 'binary service-byte'),
+    0x03: (
+        FlagByteField(data_type=ServiceByte), 'service_byte',
+        'binary service-byte'),
     0x04: (BCDIntField(length=6), 'amount', 'Amount'),
     0x05: (ByteField(), 'pump_nr', 'binary pump-Nr.'),
     0x06: (TLVField(), 'tlv', 'TLV'),
@@ -42,7 +46,9 @@ BITMAPS = {
     0x3C: (
         LLLVARField(), 'additional', 'additional-data/additional-text'),
     0x3D: (PasswordField(), 'password', 'Password'),
-    0x49: (BCDIntField(data_type=CurrencyCode, length=2), 'currency_code', 'currency code'),
+    0x49: (
+        BCDIntField(data_type=CurrencyCode, length=2), 'currency_code',
+        'currency code'),
     0x60: (LLLVARField(), 'totals', 'individual totals'),
     0x87: (BCDField(length=2), 'receipt', 'receipt-number'),
     0x88: (BCDField(length=3), 'turnover', 'turnover record number'),
@@ -82,7 +88,8 @@ BITMAPS = {
         ByteField(), 'max_input_length',
         "binary max. length of the input"),
     0xEA: (ByteField(), 'input_echo', "binary echo the Input"),
-    0xEB: (FixedLengthField(length=8), 'mac', "binary MAC over text 1 and text 2"),
+    0xEB: (FixedLengthField(length=8), 'mac',
+           "binary MAC over text 1 and text 2"),
     0xF0: (ByteField(), 'display_duration', "binary display-duration"),
     0xF1: (LLStringField(), 'line1', "text1 line 1"),
     0xF2: (LLStringField(), 'line2', "text1 line 2"),

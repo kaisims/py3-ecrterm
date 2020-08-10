@@ -10,6 +10,7 @@ from ecrterm.transmission.signals import TIMEOUT_T4_DEFAULT, TRANSMIT_OK
 
 logger = logging.getLogger('ecrterm.transmission')
 
+
 class Transmission(object):
     """
     A Transmission Object represents an open connection between ECR and

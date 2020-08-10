@@ -3,8 +3,9 @@ import struct
 from typing import Dict
 
 from .apdu import CommandAPDU
-from .fields import *
-from .types import *
+from .fields import BCDField, FlagByteField, BCDIntField, LLLStringField, \
+    ByteField, StringField, Union, List, Optional
+from .types import CurrencyCode, ConfigByte
 from .text_encoding import ZVT_7BIT_CHARACTER_SET
 
 
@@ -146,7 +147,8 @@ class DisplayText(Packet):
     CMD_CLASS = 0x06
     CMD_INSTR = 0xe0
 
-    ALLOWED_BITMAPS = ['display_duration', 'line1', 'line2', 'line3', 'line4', 'line5', 'line6', 'line7', 'line8',
+    ALLOWED_BITMAPS = ['display_duration', 'line1', 'line2', 'line3', 'line4',
+                       'line5', 'line6', 'line7', 'line8',
                        'beeps']
 
 
@@ -178,19 +180,22 @@ class Completion(Packet):
     CMD_CLASS = 0x06
     CMD_INSTR = 0x0f
 
-    # The sw_version field is optional but first. It will be sent or not depending on
-    # a bit in the previous Enquiry, which the parser doesn't know about. It's technically
-    # impossible to parse this protocol properly. We'll try anyway.
+    # The sw_version field is optional but first. It will be sent or not
+    # depending on a bit in the previous Enquiry, which the parser doesn't
+    # know about. It's technically impossible to parse this protocol
+    # properly. We'll try anyway.
     #
-    # Observe that the sw_version field is of type LLLVar, so will always start with bytes
-    # of the form FxFyFz. terminal_status is 1 byte and arbitrary (and might match Fx), but
-    # the only allowed bitmap is 06 (tlv), which will *not* match.
-    # So in case a sw_version field is present, the LLLStringField parser will reliably
-    # remove it, and if it's not present it will reliably signal a parsing error.
-    # Setting ignore_parse_error to True will suppress that parse error and continue with
-    # the rest of the packet.
+    # Observe that the sw_version field is of type LLLVar, so will always
+    # start with bytes of the form FxFyFz. terminal_status is 1 byte and
+    # arbitrary (and might match Fx), but the only allowed bitmap is 06 (
+    # tlv), which will *not* match. So in case a sw_version field is
+    # present, the LLLStringField parser will reliably remove it, and if
+    # it's not present it will reliably signal a parsing error. Setting
+    # ignore_parse_error to True will suppress that parse error and continue
+    # with the rest of the packet.
 
-    sw_version = LLLStringField(required=False, ignore_parse_error=True, character_set=ZVT_7BIT_CHARACTER_SET)
+    sw_version = LLLStringField(required=False, ignore_parse_error=True,
+                                character_set=ZVT_7BIT_CHARACTER_SET)
     terminal_status = ByteField(required=False, ignore_parse_error=True)
 
     ALLOWED_BITMAPS = ['tlv', 'status_byte', 'tid', 'currency_code']
@@ -246,7 +251,7 @@ class StatusInformation(Packet):
         # bitmap 0x60 (totals) contains the required information.
         # another bitmap (amount) holds the amount
 
-        ## FIXME Parsing of totals in the parser
+        # FIXME Parsing of totals in the parser
         return ret
 
         if 'totals' not in bdict.keys():
@@ -397,8 +402,8 @@ class PreAuthorisation(Packet):
 
 class PartialCancellation(Packet):
     """
-    06 23
-    This command executes a Partial-Cancellation for a Pre-Authorisation to release the unused amount of the reservation.
+    06 23 This command executes a Partial-Cancellation for a
+    Pre-Authorisation to release the unused amount of the reservation.
     This command is also used for the Booking of a Reservation.
     """
     CMD_CLASS = 0x06
@@ -406,7 +411,8 @@ class PartialCancellation(Packet):
     wait_for_completion = True
 
     ALLOWED_BITMAPS = [
-        'receipt', 'amount', 'currency_code', 'trace_number', 'additional', 'aid', 'tlv']
+        'receipt', 'amount', 'currency_code', 'trace_number', 'additional',
+        'aid', 'tlv']
 
 
 class PrintLine(Packet):
@@ -537,19 +543,23 @@ class WriteFileBase(CommandWithPassword):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for k, v in self.get_files_().items():
-            self.tlv.append_('x2d', {'x1d': bytes([k]), 'x1f00': struct.pack('!L', v)}, overwrite=False)
+            self.tlv.append_('x2d', {'x1d': bytes([k]),
+                                     'x1f00': struct.pack('!L', v)},
+                             overwrite=False)
 
     def get_files_(self) -> Dict[int, int]:
         raise NotImplementedError
 
-    def get_file_content_(self, file_id: int, offset: int, length: Optional[int] = None):
+    def get_file_content_(self, file_id: int, offset: int,
+                          length: Optional[int] = None):
         raise NotImplementedError
 
     def _handle_super_response(self, response, tm):
         if isinstance(response, RequestFile):
             pkt = self.get_answer_(response)
             if pkt is not None:
-                # FIXME There should be an API for this  (basically currently a copy of "send_received()")
+                # FIXME There should be an API for this  (basically
+                #  currently a copy of "send_received()")
                 tm.history += [(False, pkt), ]
                 from ecrterm.transmission._transmission import logger
                 logger.debug("> %r", pkt)
@@ -581,9 +591,10 @@ class WriteFiles(WriteFileBase):
     def get_files_(self) -> Dict[int, int]:
         return {k: len(v) for (k, v) in self._files.items()}
 
-    def get_file_content_(self, file_id: int, offset: int, length: Optional[int] = None):
+    def get_file_content_(self, file_id: int, offset: int,
+                          length: Optional[int] = None):
         if length is not None:
-            return self._files[file_id][offset:(offset+length)]
+            return self._files[file_id][offset:(offset + length)]
         else:
             return self._files[file_id][offset:]
 

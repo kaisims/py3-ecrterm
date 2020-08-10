@@ -1,6 +1,9 @@
-from ecrterm.packets.context import enter_context, GlobalContext, CurrentContext
+import threading
+import time
 from unittest import TestCase, main
-import threading, time
+
+from ecrterm.packets.context import enter_context, GlobalContext, \
+    CurrentContext
 
 
 class TestContext(TestCase):
@@ -11,7 +14,8 @@ class TestContext(TestCase):
 
         del GlobalContext['test_normal_access']
 
-        self.assertRaises(KeyError, lambda: GlobalContext['test_normal_access'])
+        self.assertRaises(KeyError,
+                          lambda: GlobalContext['test_normal_access'])
 
     def test_nested_access_1(self):
         GlobalContext['test_nested_access_1'] = 1
@@ -25,7 +29,8 @@ class TestContext(TestCase):
 
             del CurrentContext['test_nested_access_1']
 
-            self.assertRaises(KeyError, lambda: CurrentContext['test_nested_access_1'])
+            self.assertRaises(KeyError,
+                              lambda: CurrentContext['test_nested_access_1'])
 
         self.assertEqual(1, CurrentContext['test_nested_access_1'])
 
@@ -50,7 +55,8 @@ class TestContext(TestCase):
         with enter_context():
             del CurrentContext['test_nested_delete']
 
-            self.assertRaises(KeyError, lambda: CurrentContext['test_nested_delete'])
+            self.assertRaises(KeyError,
+                              lambda: CurrentContext['test_nested_delete'])
 
             CurrentContext['test_nested_delete'] = 2
 
@@ -59,10 +65,12 @@ class TestContext(TestCase):
         self.assertEqual(1, CurrentContext['test_nested_delete'])
 
     def test_nested_access_3(self):
-        self.assertRaises(KeyError, lambda: CurrentContext['test_nested_access_3'])
+        self.assertRaises(KeyError,
+                          lambda: CurrentContext['test_nested_access_3'])
 
         with enter_context():
-            self.assertRaises(KeyError, lambda: CurrentContext['test_nested_access_3'])
+            self.assertRaises(KeyError,
+                              lambda: CurrentContext['test_nested_access_3'])
 
             GlobalContext['test_nested_access_3'] = 1
 
@@ -92,6 +100,7 @@ class TestContext(TestCase):
 
         self.assertEqual(1, GlobalContext['test_threads'])
         self.assertEqual(1, CurrentContext['test_threads'])
+
 
 if __name__ == '__main__':
     main()

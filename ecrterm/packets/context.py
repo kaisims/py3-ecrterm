@@ -58,7 +58,8 @@ class MetaContext:
 @contextlib.contextmanager
 def enter_context(**kwargs):
     _get_current_context()
-    _localdata.contexts.append(Context(_parent=_localdata.contexts[-1], **kwargs))
+    _localdata.contexts.append(Context(_parent=_localdata.contexts[-1],
+                                       **kwargs))
     yield
     _localdata.contexts.pop()
 

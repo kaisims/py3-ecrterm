@@ -1,6 +1,5 @@
 import logging
 from binascii import hexlify
-from functools import partial
 from socket import (
     IPPROTO_TCP, SHUT_RDWR, SO_KEEPALIVE, SOL_SOCKET, create_connection)
 import ssl
@@ -24,7 +23,6 @@ try:
     from socket import TCP_KEEPCNT
 except ImportError:
     TCP_KEEPCNT = None
-
 
 logger = logging.getLogger('ecrterm.transport.socket')
 
@@ -86,12 +84,15 @@ class SocketTransport(Transport):
 
         if timeout is None:
             timeout = self.connect_timeout
-        socket = create_connection(address=(self.ip, self.port), timeout=timeout)
+        socket = create_connection(address=(self.ip, self.port),
+                                   timeout=timeout)
         try:
-            socket = create_connection(address=(self.ip, self.port), timeout=timeout)
+            socket = create_connection(address=(self.ip, self.port),
+                                       timeout=timeout)
             self.sock = socket
             if self.ssl:
-                self.sock = context.wrap_socket(socket, server_hostname=self.ip)
+                self.sock = context.wrap_socket(socket,
+                                                server_hostname=self.ip)
             if self.so_keepalive:
                 self.sock.setsockopt(
                     SOL_SOCKET, SO_KEEPALIVE, self.so_keepalive)

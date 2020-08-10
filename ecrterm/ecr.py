@@ -16,7 +16,9 @@ from ecrterm.exceptions import (
 from ecrterm.packets.base_packets import (
     Authorisation, CloseCardSession, Completion, DisplayText, EndOfDay, Packet,
     PrintLine, ReadCard, Registration, ResetTerminal, StatusEnquiry,
-    StatusInformation, WriteFiles, PreAuthorisation, PartialCancellation, AbortCommand)
+    StatusInformation, WriteFiles, PreAuthorisation, PartialCancellation,
+    AbortCommand
+)
 from ecrterm.packets.types import ConfigByte
 from ecrterm.transmission._transmission import Transmission
 from ecrterm.transmission.signals import ACK, DLE, ETX, NAK, STX, TRANSMIT_OK
@@ -142,6 +144,7 @@ class ECR(object):
     def __get_last(self):
         if self.transmitter is not None:
             return self.transmitter.last
+
     # !: Last is a short access for transmitter.last if possible.
     last = property(__get_last)
 
@@ -162,7 +165,7 @@ class ECR(object):
             # get the terminal-id if its there.
             for inc, packet in self.transmitter.last_history:
                 if inc and isinstance(packet, Completion):
-                    self.terminal_id = packet.as_dict().get('tid', '00'*4)
+                    self.terminal_id = packet.as_dict().get('tid', '00' * 4)
             # remember this.
             self._state_registered = True
         return ret
@@ -172,8 +175,10 @@ class ECR(object):
         registers to the PT, not locking the master menu on it.
         do not use in production environment.
         """
-        return self.register(password=self.password,
-                             config_byte=ConfigByte.DEFAULT & ~ConfigByte.ECR_CONTROLS_ADMIN)
+        return self.register(
+            password=self.password,
+            config_byte=ConfigByte.DEFAULT & ~ConfigByte.ECR_CONTROLS_ADMIN
+        )
 
     def _end_of_day_info_packet(self, history=None):
         """
@@ -266,8 +271,8 @@ class ECR(object):
     def preauthorisation(self, amount_cent=50, listener=None):
         """
         executes a preauthorisation in amount of cents.
-        @returns: Receipt Number, if preAuthorisation was successful, or False if it was
-        canceled.
+        @returns: Receipt Number, if preAuthorisation was successful
+        or False if it was canceled.
         throws exceptions.
         """
         packet = PreAuthorisation(
@@ -426,7 +431,7 @@ class ECR(object):
                 ok, message = self.transport.receive(timeout)
                 if ok and message:
                     return message
-            except:
+            except Exception:
                 logger.exception()
                 continue
             print('-mark-')
@@ -443,7 +448,9 @@ class ECR(object):
     def parse_str(self, s):
         return parse_represented_data(s)
 
-    def read_card(self, timeout=1, read_card_args={}):
+    def read_card(self, timeout=1, read_card_args=None):
+        if read_card_args is None:
+            read_card_args = {}
         args = dict(read_card_args)
         args.setdefault('timeout', timeout)
         return self.transmit(ReadCard(**args))

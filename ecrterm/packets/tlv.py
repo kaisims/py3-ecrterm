@@ -1,6 +1,7 @@
 import string
 from enum import IntEnum
-from typing import Union, Tuple, TypeVar, Type, List, Dict, Tuple, Any, Optional
+from typing import Union, TypeVar, Type, List, Dict, Tuple, Any, \
+    Optional
 from .context import CurrentContext, enter_context
 from .types import VendorQuirks
 
@@ -22,8 +23,9 @@ class NotProvided:
 
 NOT_PROVIDED = NotProvided()
 
-
-_FIRST_PARAM_TYPE = Union[NotProvided, TLVType, Tuple[Union[TLVType, List, Tuple]], List[Union[TLVType, List, Tuple]], Dict[Union[int, str], Any]]
+_FIRST_PARAM_TYPE = Union[
+    NotProvided, TLVType, Tuple[Union[TLVType, List, Tuple]], List[
+        Union[TLVType, List, Tuple]], Dict[Union[int, str], Any]]
 
 
 class TLV:
@@ -74,14 +76,18 @@ class TLV:
                 length = length >> 8
             retval.append(0x80 | len(retval))
             return bytes(reversed(retval))
+
     # </editor-fold>
 
-    def __new__(cls: Type[TLVType], constructed_value_: _FIRST_PARAM_TYPE = NOT_PROVIDED, *args, **kwargs):
+    def __new__(cls: Type[TLVType],
+                constructed_value_: _FIRST_PARAM_TYPE = NOT_PROVIDED, *args,
+                **kwargs):
         if isinstance(constructed_value_, TLV):
             return constructed_value_
         return super().__new__(cls)
 
-    def __init__(self, constructed_value_: _FIRST_PARAM_TYPE =NOT_PROVIDED, tag_=None, value_=NOT_PROVIDED, implicit_=False, **kwargs):
+    def __init__(self, constructed_value_: _FIRST_PARAM_TYPE = NOT_PROVIDED,
+                 tag_=None, value_=NOT_PROVIDED, implicit_=False, **kwargs):
         if isinstance(constructed_value_, TLV):
             return  # __new__ handled this
 
@@ -94,19 +100,23 @@ class TLV:
 
         self.tag_ = tag_
 
-        if constructed_value_ is not NOT_PROVIDED and value_ is not NOT_PROVIDED:
+        if constructed_value_ is not NOT_PROVIDED and \
+                value_ is not NOT_PROVIDED:
             raise TypeError("Cannot pass both constructed_value_ and value_")
 
         if value_ is not NOT_PROVIDED:
             self.value_ = value_
         elif constructed_value_ is not NOT_PROVIDED:
             if not self.constructed_:
-                raise TypeError("Tag must be of constructed type to pass constructed_value_")
+                raise TypeError(
+                    "Tag must be of constructed type "
+                    "to pass constructed_value_")
             self.value_ = constructed_value_
 
         if kwargs:
             if not self.constructed_:
-                raise TypeError("Tag must be of constructed type to pass kwargs")
+                raise TypeError(
+                    "Tag must be of constructed type to pass kwargs")
             for k, v in kwargs.items():
                 self.append_(k, v, overwrite=False)
 
@@ -120,7 +130,8 @@ class TLV:
         if self._tag is not NOT_PROVIDED:
             raise TypeError("Cannot change tag after creation")
 
-        active_dictionary = TLVDictionary.get(CurrentContext.get('tlv_dictionary', 'default'))
+        active_dictionary = TLVDictionary.get(
+            CurrentContext.get('tlv_dictionary', 'default'))
 
         self._tag = value
         self._class = None
@@ -130,7 +141,8 @@ class TLV:
             t = value
             while t > 0xff:
                 t >>= 8
-            if VendorQuirks.FEIG_CVEND in CurrentContext.get('vendor_quirks', set()):
+            if VendorQuirks.FEIG_CVEND in CurrentContext.get('vendor_quirks',
+                                                             set()):
                 if 0xff00 <= value <= 0xffff:
                     self._constructed = False
                 else:
@@ -141,6 +153,7 @@ class TLV:
 
         if not self._constructed:
             self._type = active_dictionary.get(value, active_dictionary[None])
+
     # </editor-fold>
 
     # <editor-fold desc="constructed/class accessors">
@@ -151,6 +164,7 @@ class TLV:
     @property
     def class_(self):
         return self._class
+
     # </editor-fold>
 
     # <editor-fold desc="value accessors">
@@ -165,7 +179,7 @@ class TLV:
         if value is not None:
             self._implicit = False
         if self._constructed:
-            if isinstance(value, (tuple,list)):
+            if isinstance(value, (tuple, list)):
                 self._value = []
                 for item in value:
                     if isinstance(item, TLV):
@@ -193,10 +207,12 @@ class TLV:
                 self._value = self._type.from_bytes(value)
             else:
                 self._value = value
+
     # </editor-fold>
 
     def __getattr__(self, key):
-        if self._constructed and key.startswith('x') and all(e in string.hexdigits for e in key[1:]):
+        if self._constructed and key.startswith('x') and all(
+                e in string.hexdigits for e in key[1:]):
             tag = int(key[1:], 16)
 
             for item in self.value_:
@@ -211,10 +227,13 @@ class TLV:
 
             return self.__getattr__(key)
 
-        raise AttributeError("{} object has no attribute {!r}".format(self.__class__.__name__, key))
+        raise AttributeError(
+            "{} object has no attribute {!r}".format(self.__class__.__name__,
+                                                     key))
 
     def __setattr__(self, key, value):
-        if key.startswith("_") or key.endswith("_") or key in ["parse", "serialize"]:
+        if key.startswith("_") or key.endswith("_") or key in ["parse",
+                                                               "serialize"]:
             return super().__setattr__(key, value)
 
         return self.append_(key, value, overwrite=True)
@@ -230,7 +249,8 @@ class TLV:
                 valstr = "value_={!r}".format(self.value_)
             else:
                 for i, (k, v) in enumerate(items):
-                    if isinstance(v, list) and all(isinstance(e, TLV) for e in v):
+                    if isinstance(v, list) and all(
+                            isinstance(e, TLV) for e in v):
                         if len(v) == len({e.tag_ for e in v}):
                             items[i] = (k, {e.name_: e.value_ for e in v})
                 valstr = ", ".join(
@@ -257,14 +277,15 @@ class TLV:
             raise TypeError("Cannot access items_ of primitive TLV")
         retval = []
         for v in self.value_:
-            retval.append( (v.name_, v.value_) )
+            retval.append((v.name_, v.value_))
         return retval
 
     def append_(self, key, value, overwrite=False):
         tag = None
 
         if self._constructed:
-            if key.startswith('x') and all(e in string.hexdigits for e in key[1:]):
+            if key.startswith('x') and all(
+                    e in string.hexdigits for e in key[1:]):
                 tag = int(key[1:], 16)
             elif isinstance(key, int):
                 tag = key
@@ -298,7 +319,8 @@ class TLV:
             return bytes(retval)
 
     @classmethod
-    def parse(cls: Type[TLVType], data: bytes, empty_tag: bool = False, dictionary: Optional[str]=None) -> Tuple[TLVType, bytes]:
+    def parse(cls: Type[TLVType], data: bytes, empty_tag: bool = False,
+              dictionary: Optional[str] = None) -> Tuple[TLVType, bytes]:
         pos = 0
 
         if empty_tag:
@@ -308,7 +330,7 @@ class TLV:
 
         length, pos = cls._read_tlv_length(data, pos)
 
-        value_ = data[pos:(pos+length)]
+        value_ = data[pos:(pos + length)]
         pos = pos + length
 
         if dictionary is not None:
@@ -335,6 +357,7 @@ class TLV:
 
 class TLVDataType:
     name = None
+
     def __init__(self, name=None, *args, **kwargs):
         if name is not None:
             self.name = name
@@ -376,7 +399,6 @@ TLVDictionary.register(
         None: BytesData(),
     },
 )
-
 
 # FIXME store active dictionary in container
 # FIXME Tag value assignment with non-byte data

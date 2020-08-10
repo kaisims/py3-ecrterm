@@ -18,7 +18,8 @@ from unittest import TestCase, main
 from ecrterm.conv import toHexString
 from ecrterm.packets.base_packets import (
     Authorisation, Diagnosis, DisplayText, Initialisation, PacketReceived,
-    PacketReceivedError, PrintLine, Registration, ResetTerminal, StatusEnquiry, ReadCard)
+    PacketReceivedError, PrintLine, Registration, ResetTerminal, StatusEnquiry,
+    ReadCard)
 from ecrterm.transmission.signals import ACK, NAK
 from ecrterm.transmission.transport_serial import SerialMessage
 
@@ -118,7 +119,8 @@ class TestCaseDataEncoding(TestCase):
 class TestReadCard(TestCase):
     def test_read_card_1(self):
         a = ReadCard(timeout=0x01, tlv={0x1F15: b'\xD0'})
-        self.assertEqual(bytearray.fromhex('06c0070106041f1501d0'), a.serialize())
+        self.assertEqual(bytearray.fromhex('06c0070106041f1501d0'),
+                         a.serialize())
 
 
 if __name__ == '__main__':

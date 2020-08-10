@@ -1,7 +1,7 @@
 from ecrterm.packets.apdu import CommandAPDU, ParseError
-from ecrterm.packets.tlv import TLV
 from ecrterm.packets.fields import ByteField, BytesField, BCDIntField
-from ecrterm.packets.base_packets import LogOff, Initialisation, Registration, DisplayText, Completion, PrintLine, Authorisation, WriteFileBase
+from ecrterm.packets.base_packets import LogOff, Initialisation, Registration,\
+    DisplayText, PrintLine, Authorisation, WriteFileBase
 from unittest import TestCase, main
 
 
@@ -26,7 +26,8 @@ class TestAPDUParser(TestCase):
         self.assertEqual(978, c.cc)
 
     def test_parse_error(self):
-        self.assertRaises(ParseError, CommandAPDU.parse, bytearray.fromhex('06020322F0E0'))
+        self.assertRaises(ParseError,
+                          CommandAPDU.parse, bytearray.fromhex('06020322F0E0'))
 
     def test_parse_cursed_completion(self):
         c1 = CommandAPDU.parse(bytearray.fromhex('060f07F0F0F3626c6100'))
@@ -88,7 +89,8 @@ class DummyPacket(CommandAPDU):
     CMD_INSTR = 0xaa
 
     OVERRIDE_BITMAPS = {
-        # Warning: This will consume the remainder of the packet. Do not use when more bitmaps are expected.
+        # Warning: This will consume the remainder of the packet.
+        # Do not use when more bitmaps are expected.
         0x06: (BytesField(), 'raw_tlv', 'Unparsed TLV'),
     }
 
@@ -98,12 +100,14 @@ class TestAPDUBitmaps(TestCase):
         c = Registration('777777', 0xa0, cc='0978')
         c.service_byte = 0x0a
 
-        self.assertEqual(bytearray.fromhex('060008777777a00978030a'), c.serialize())
+        self.assertEqual(bytearray.fromhex('060008777777a00978030a'),
+                         c.serialize())
 
     def test_as_dict(self):
         c = Registration('777777', 0xa0)
 
-        self.assertEqual({'password': '777777', 'config_byte': 0xa0}, c.as_dict())
+        self.assertEqual({'password': '777777', 'config_byte': 0xa0},
+                         c.as_dict())
 
     def test_nonexisting_attributes(self):
         c = Registration('123456')
@@ -146,7 +150,9 @@ class TestAPDUBitmaps(TestCase):
         self.assertRaises(ValueError, c.serialize)
 
     def test_parse_with_tlv(self):
-        c = CommandAPDU.parse(bytearray.fromhex('06501712345606123f210c60065501aa0501bb1002abba110177'))
+        c = CommandAPDU.parse(
+            bytearray.fromhex(
+                '06501712345606123f210c60065501aa0501bb1002abba110177'))
 
         self.assertEqual('123456', c.password)
         self.assertEqual(b'\x77', c.tlv.x11)
@@ -157,18 +163,19 @@ class TestAPDUBitmaps(TestCase):
     def test_create_tlv(self):
         c1 = Authorisation(tlv={0xf2: {0xc1: b'\x12\x23'}})
 
-        self.assertEqual(bytearray.fromhex('0601080606f204c1021223'), c1.serialize())
+        self.assertEqual(bytearray.fromhex('0601080606f204c1021223'),
+                         c1.serialize())
 
         c2 = Authorisation()
         c2.tlv.xf2.xc1 = b'\x12\x23'
-        self.assertEqual(bytearray.fromhex('0601080606f204c1021223'), c2.serialize())
+        self.assertEqual(bytearray.fromhex('0601080606f204c1021223'),
+                         c2.serialize())
 
     def test_override_bitmaps(self):
         c = CommandAPDU.parse(bytearray.fromhex('ffaa040602ffaa'))
 
         self.assertIsInstance(c.raw_tlv, bytes)
         self.assertEqual(b'\x02\xff\xaa', c.raw_tlv)
-
 
     # FIXME Test TLV names
 
@@ -182,9 +189,20 @@ class TestRegression(TestCase):
         c.serialize()
 
     def test_write_file_2(self):
-        c = CommandAPDU.parse([16, 2, 8, 20, 101, 0, 0, 0, 6, 96, 45, 10, 29, 1, 48, 31, 0, 4, 0, 0, 2, 103, 45, 10, 29, 1, 49, 31, 0, 4, 0, 0, 0, 231, 45, 10, 29, 1, 33, 31, 0, 4, 0, 59, 48, 18, 45, 10, 29, 1, 32, 31, 0, 4, 0, 0, 2, 103, 45, 10, 29, 1, 16, 16, 31, 0, 4, 0, 41, 58, 67, 45, 10, 29, 1, 17, 31, 0, 4, 0, 180, 5, 108, 45, 10, 29, 1, 18, 31, 0, 4, 0, 0, 3, 57, 45, 10, 29, 1, 19, 31, 0, 4, 0, 0, 6, 2, 16, 3, 185, 57])
+        c = CommandAPDU.parse(
+            [16, 2, 8, 20, 101, 0, 0, 0, 6, 96,
+             45, 10, 29, 1, 48, 31, 0, 4, 0, 0,
+             2, 103, 45, 10, 29, 1, 49, 31, 0,
+             4, 0, 0, 0, 231, 45, 10, 29, 1,
+             33, 31, 0, 4, 0, 59, 48, 18, 45,
+             10, 29, 1, 32, 31, 0, 4, 0, 0, 2,
+             103, 45, 10, 29, 1, 16, 16, 31, 0,
+             4, 0, 41, 58, 67, 45, 10, 29, 1, 17,
+             31, 0, 4, 0, 180, 5, 108, 45, 10, 29,
+             1, 18, 31, 0, 4, 0, 0, 3, 57, 45, 10,
+             29, 1, 19, 31, 0, 4, 0, 0, 6, 2, 16,
+             3, 185, 57])
         self.assertIsInstance(c, WriteFileBase)
-
 
 
 if __name__ == '__main__':
