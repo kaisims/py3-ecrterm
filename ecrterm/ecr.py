@@ -119,7 +119,7 @@ class ECR(object):
         See http://man7.org/linux/man-pages/man7/tcp.7.html for TCP
         flags details.
 
-        Use Flag `ssl=true` to use connection over a secured connection. SSl/TLS
+        Use Flag `ssl=true` to use a secured connection. SSl/TLS
         """
         if device.startswith('/') or device.startswith('COM'):
             self.transport = SerialTransport(device)
@@ -299,8 +299,8 @@ class ECR(object):
     def partialcancellation(self, receipt=None, amount_cent=50, listener=None):
         """
         executes a preauthorisation in amount of cents.
-        @returns: Receipt Number, if preAuthorisation was successful, or False if it was
-        canceled.
+        @returns: Receipt Number, if preAuthorisation was successful,
+        or False if it was canceled.
         throws exceptions.
         """
         packet = PartialCancellation(
@@ -443,6 +443,8 @@ class ECR(object):
         # note: this only executes utils.detect_pt with the local ecrterm.
         if type(self.transport) is SerialTransport:
             return detect_pt_serial(timeout=2, silent=False, ecr=self)
+        elif type(self.transport) is SocketTransport:
+            return self.transport.connect()
         return True
 
     def parse_str(self, s):
